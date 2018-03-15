@@ -13,7 +13,7 @@ contract MultiSigWallet {
     event Submission(uint indexed transactionId);
     event Execution(uint indexed transactionId);
     event ExecutionFailure(uint indexed transactionId);
-    event Donated(address indexed sender, uint value);
+    event Donated(address indexed sender, uint value); // The only change for Giveth Multisigs
     event OwnerAddition(address indexed owner);
     event OwnerRemoval(address indexed owner);
     event RequirementChange(uint required);
