@@ -527,7 +527,7 @@
 
       wallet.deployWithLimit = function (owners, requiredConfirmations, limit, cb) {
         var MyContract = Web3Service.web3.eth.contract(wallet.json.multiSigDailyLimit.abi);
-        var gasNeeded = 2556980 + 42733 * owners.length; // Gas to create multisig with dynamic gas for owners
+        var gasNeeded = 3000000;
 
         Web3Service.configureGas({gas: gasNeeded, gasPrice: wallet.txParams.gasPrice}, function (gasOptions){
           MyContract.new(
@@ -546,21 +546,35 @@
 
       wallet.deployWithLimitFactory = function (owners, requiredConfirmations, limit, cb) {
         var walletFactory = Web3Service.web3.eth.contract(wallet.json.multiSigDailyLimitFactory.abi).at(txDefault.walletFactoryAddress);
-        var gasNeeded = 2002000 + 27820 * owners.length;
-
-        Web3Service.configureGas({gas: gasNeeded, gasPrice: wallet.txParams.gasPrice}, function (gasOptions){
-          walletFactory.create(
+        walletFactory
+          .create
+          .estimateGas(
             owners,
             requiredConfirmations,
             limit,
-            wallet.txDefaults({
-              data: wallet.json.multiSigDailyLimit.binHex,
-              gas: gasOptions.gas,
-              gasPrice: gasOptions.gasPrice
-            }),
-            cb
+            function (e, gas) {
+              if (e) {
+                cb(e);
+              }
+              else {
+                Web3Service.configureGas({gas: Math.ceil(gas * 1.5), gasPrice: wallet.txParams.gasPrice}, function (gasOptions){
+                  walletFactory.create(
+                    owners,
+                    requiredConfirmations,
+                    limit,
+                    wallet.txDefaults({
+                      data: wallet.json.multiSigDailyLimit.binHex,
+                      gas: gasOptions.gas,
+                      gasPrice: gasOptions.gasPrice
+                    }),
+                    cb
+                  );
+                });
+              }
+            }
           );
-        });
+
+        
       };
 
       wallet.deployWithLimitFactoryOffline = function (owners, requiredConfirmations, limit, cb) {
@@ -1030,15 +1044,22 @@
       */
       wallet.confirmTransaction = function (address, txId, options, cb) {
         var instance = Web3Service.web3.eth.contract(wallet.json.multiSigDailyLimit.abi).at(address);
-        Web3Service.sendTransaction(
-          instance.confirmTransaction,
-          [
-            txId,
-            wallet.txDefaults()
-          ],
-          options,
-          cb
-        );
+        instance.confirmTransaction.estimateGas(txId, wallet.txDefaults(), function (e, gas){
+          if (e) {
+            cb(e);
+          }
+          else {
+            Web3Service.sendTransaction(
+              instance.confirmTransaction,
+              [
+                txId,
+                wallet.txDefaults({gas: Math.ceil(gas * 1.5)})
+              ],
+              options,
+              cb
+            );
+          }
+        });        
       };
 
       /**
@@ -1063,15 +1084,22 @@
       */
       wallet.executeTransaction = function (address, txId, options, cb) {
         var instance = Web3Service.web3.eth.contract(wallet.json.multiSigDailyLimit.abi).at(address);
-        Web3Service.sendTransaction(
-          instance.executeTransaction,
-          [
-            txId,
-            wallet.txDefaults()
-          ],
-          options,
-          cb
-        );
+        instance.executeTransaction.estimateGas(txId, wallet.txDefaults(), function (e, gas) {
+          if (e) {
+            cb(e);
+          }
+          else {
+            Web3Service.sendTransaction(
+              instance.executeTransaction,
+              [
+                txId,
+                wallet.txDefaults({gas: Math.ceil(gas * 1.5)})
+              ],
+              options,
+              cb
+            );
+          }          
+        });        
       };
 
       /**
@@ -1131,7 +1159,7 @@
           instance.revokeConfirmation,
           [
             txId,
-            wallet.txDefaults()
+            wallet.txDefaults({gas: 300000})
           ],
           options,
           cb
@@ -1170,18 +1198,33 @@
             cb(e);
           }
           else {
-            Web3Service.sendTransaction(
-              walletInstance.submitTransaction,
-              [
-                tx.to,
-                tx.value,
-                data,
-                count,
-                wallet.txDefaults(),
-              ],
-              options,
-              cb
-            );
+            // estimate gas
+            walletInstance.submitTransaction.estimateGas(
+              tx.to,
+              tx.value,
+              data,
+              count,
+              wallet.txDefaults(),
+              function (e, gas) {
+                if (e) {
+                  cb(e);
+                }
+                else {
+                  Web3Service.sendTransaction(
+                    walletInstance.submitTransaction,
+                    [
+                      tx.to,
+                      tx.value,
+                      data,
+                      count,
+                      wallet.txDefaults({gas: Math.ceil(gas * 1.5)}),
+                    ],
+                    options,
+                    cb
+                  );
+                }                
+              }
+            );            
           }
         }).call();
       };
