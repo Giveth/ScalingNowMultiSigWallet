@@ -13,7 +13,7 @@ contract MultiSigWallet {
     event Submission(uint indexed transactionId);
     event Execution(uint indexed transactionId);
     event ExecutionFailure(uint indexed transactionId);
-    event Deposit(address indexed sender, uint value);
+    event Donated(address indexed sender, uint value);
     event OwnerAddition(address indexed owner);
     event OwnerRemoval(address indexed owner);
     event RequirementChange(uint required);
@@ -91,12 +91,12 @@ contract MultiSigWallet {
         _;
     }
 
-    /// @dev Fallback function allows to deposit ether.
+    /// @dev Fallback function allows to donate ether.
     function()
         payable
     {
         if (msg.value > 0)
-            Deposit(msg.sender, msg.value);
+            Donated(msg.sender, msg.value);
     }
 
     /*
